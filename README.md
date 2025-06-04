@@ -21,12 +21,12 @@ This tool leverages state-of-the-art speech recognition and natural language pro
 
 To set up the project locally:
 
-# 1. Clone the repository
+### 1. Clone the repository
 ```bash
 git clone https://github.com/idrak-dareshani/transcribe.git
 cd transcribe
 ```
-# 2. Install required packages
+### 2. Install required packages
 ```bash
 pip install git+https://github.com/openai/whisper.git
 pip install nltk transformers time
