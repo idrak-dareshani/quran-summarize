@@ -22,7 +22,7 @@ from transformers import pipeline
 class AudioProcessor:
     """Handles audio transcription and text processing pipeline."""
     
-    def __init__(self, model_size: str = "medium", nltk_data_path: str = "nltk_data"):
+    def __init__(self, model_size: str = "medium", nltk_data_path: str = "d:/nltk_data"):
         """
         Initialize the AudioProcessor.
         
@@ -214,7 +214,7 @@ class AudioProcessor:
         
         return "\n\n".join(summaries)
     
-    def process_pipeline(self, audio_file: str, language: str = "en") -> dict:
+    def process_pipeline(self, file_name: str, language: str = "en") -> dict:
         """
         Run the complete audio processing pipeline.
         
@@ -229,6 +229,7 @@ class AudioProcessor:
         
         try:
             # Step 1: Transcribe audio
+            audio_file = f"audio/{file_name}.mp3"
             transcription = self.transcribe_audio(audio_file, language)
             results['transcription'] = transcription
             
@@ -242,7 +243,7 @@ class AudioProcessor:
             summary = self.summarize_text(combined_text)
             
             # Save summary
-            with open("analysis/summary.txt", "w", encoding="utf-8") as f:
+            with open(f"analysis/{file_name}_summary.txt", "w", encoding="utf-8") as f:
                 f.write(summary)
             
             results['summary'] = summary
@@ -262,15 +263,18 @@ class AudioProcessor:
 def main():
     """Main function to run the audio processing pipeline."""
     # Configuration
-    audio_file = "audio/input_audio.mp3"
-    language = "en"
-    model_size = "medium"
+    file_name = "001 - SURAH AL-FATIAH"
+    audio_file = f"audio/{file_name}.mp3"
+    language = "ur"
+    model_size = "base"
+    
+    print(audio_file)
     
     # Initialize processor
     processor = AudioProcessor(model_size=model_size)
     
     # Run pipeline
-    results = processor.process_pipeline(audio_file, language)
+    results = processor.process_pipeline(file_name, language)
     
     # Print results
     if results['status'] == 'success':
