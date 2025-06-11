@@ -1,4 +1,6 @@
 /.venv
 /audio
 /analysis
+/nltk_data
 /transcripts
+audio_processing.log
