@@ -23,8 +23,8 @@ To set up the project locally:
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/idrak-dareshani/transcribe.git
-cd transcribe
+git clone https://github.com/idrak-dareshani/transcribe_audio_file.git
+cd transcribe_audio_file
 ```
 ### 2. Install required packages
 ```bash
