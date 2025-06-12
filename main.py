@@ -368,9 +368,9 @@ class AudioProcessor:
         
         # Adjust parameters based on language
         if max_length is None:
-            max_length = 100 if language == 'ur' else 150
+            max_length = 17 if language == 'ur' else 150
         if min_length is None:
-            min_length = 30 if language == 'ur' else 50
+            min_length = 8 if language == 'ur' else 50
         
         summarizer = self._load_summarizer(language)
         summaries = []
@@ -526,7 +526,7 @@ def main():
     file_name = "001 - SURAH AL-FATIAH"  # Your audio file name (without extension)
     language = "ur"  # Default to Urdu, but can be "en" for English
     model_size = "medium"  # Recommended for better accuracy
-    auto_detect = True  # Set to True to auto-detect language
+    auto_detect = False  # Set to True to auto-detect language
     
     # Initialize processor
     processor = AudioProcessor(model_size=model_size)

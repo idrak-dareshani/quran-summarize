@@ -1,0 +1,36 @@
+2025-06-12 21:43:58,311 - INFO - Loading Whisper model: medium
+2025-06-12 21:44:19,060 - INFO - Starting transcription of audio/001 - SURAH AL-FATIAH.mp3 (language: ur)
+2025-06-12 22:28:34,656 - INFO - Transcription completed in 44m 15s
+2025-06-12 22:28:34,670 - INFO - Detailed transcription saved to transcripts/001 - SURAH AL-FATIAH_transcription_detailed.txt
+2025-06-12 22:28:34,671 - INFO - Transcription saved to transcripts/001 - SURAH AL-FATIAH_transcription.txt
+2025-06-12 22:28:34,682 - INFO - Processed 1 sentences for ur, saved to analysis/sentences_ur.txt
+2025-06-12 22:28:34,691 - INFO - Loading summarization model for language: ur
+2025-06-12 22:28:34,691 - INFO - Loading mT5 model for Urdu/multilingual
+2025-06-12 22:28:46,097 - WARNING - Failed to load preferred model: 
+ requires the protobuf library but it was not found in your environment. Checkout the instructions on the
+installation page of its repo: https://github.com/protocolbuffers/protobuf/tree/master/python#installation and follow the ones
+that match your environment. Please note that you may need to restart your runtime after installation.
+
+2025-06-12 22:28:46,097 - INFO - Falling back to BART model
+2025-06-12 22:28:48,907 - INFO - Summarizing ur text with 6048 words
+2025-06-12 22:28:49,700 - ERROR - ❌ Error summarizing chunk 1: index out of range in self
+2025-06-12 22:28:49,734 - ERROR - ❌ Error summarizing chunk 2: index out of range in self
+2025-06-12 22:28:49,756 - ERROR - ❌ Error summarizing chunk 3: index out of range in self
+2025-06-12 22:28:49,769 - ERROR - ❌ Error summarizing chunk 4: index out of range in self
+2025-06-12 22:28:49,775 - ERROR - ❌ Error summarizing chunk 5: index out of range in self
+2025-06-12 22:28:49,781 - ERROR - ❌ Error summarizing chunk 6: index out of range in self
+2025-06-12 22:28:49,789 - ERROR - ❌ Error summarizing chunk 7: index out of range in self
+2025-06-12 22:28:49,803 - ERROR - ❌ Error summarizing chunk 8: index out of range in self
+2025-06-12 22:28:49,811 - ERROR - ❌ Error summarizing chunk 9: index out of range in self
+2025-06-12 22:28:49,817 - ERROR - ❌ Error summarizing chunk 10: index out of range in self
+2025-06-12 22:28:49,825 - ERROR - ❌ Error summarizing chunk 11: index out of range in self
+2025-06-12 22:28:49,839 - ERROR - ❌ Error summarizing chunk 12: index out of range in self
+2025-06-12 22:28:49,844 - ERROR - ❌ Error summarizing chunk 13: index out of range in self
+2025-06-12 22:28:49,850 - ERROR - ❌ Error summarizing chunk 14: index out of range in self
+2025-06-12 22:28:49,855 - ERROR - ❌ Error summarizing chunk 15: index out of range in self
+2025-06-12 22:28:49,861 - ERROR - ❌ Error summarizing chunk 16: index out of range in self
+2025-06-12 22:28:49,867 - ERROR - ❌ Error summarizing chunk 17: index out of range in self
+2025-06-12 22:28:49,872 - ERROR - ❌ Error summarizing chunk 18: index out of range in self
+2025-06-12 22:28:49,877 - ERROR - ❌ Error summarizing chunk 19: index out of range in self
+2025-06-12 22:28:49,889 - ERROR - ❌ Error summarizing chunk 20: index out of range in self
+2025-06-12 22:29:23,981 - INFO - Multilingual audio processing pipeline completed successfully for ur

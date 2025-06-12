@@ -1,10 +1,8 @@
 # Core ML Libraries
 torch>=2.0.0
 transformers>=4.30.0
-openai-whisper>=20231117
-
-# Natural Language Processing
-nltk>=3.8
+# openai-whisper>=20231117 (not working, use following)
+#pip install git+https://github.com/openai/whisper.git 
 
 # Audio Processing (optional, for additional audio formats)
 librosa>=0.10.0
