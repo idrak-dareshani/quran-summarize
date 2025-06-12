@@ -22,7 +22,7 @@ from transformers import pipeline
 class AudioProcessor:
     """Handles audio transcription and text processing pipeline."""
     
-    def __init__(self, model_size: str = "medium", nltk_data_path: str = "d:/nltk_data"):
+    def __init__(self, model_size: str = "medium", nltk_data_path: str = "nltk_data"):
         """
         Initialize the AudioProcessor.
         
@@ -266,12 +266,11 @@ def main():
     file_name = "001 - SURAH AL-FATIAH"
     audio_file = f"audio/{file_name}.mp3"
     language = "ur"
-    model_size = "base"
-    
-    print(audio_file)
+    model_size = "medium"  # Options: 'tiny', 'base', 'small', 'medium', 'large'
+    nltk_data_path = "d:/nltk_data"  # Path to store NLTK data
     
     # Initialize processor
-    processor = AudioProcessor(model_size=model_size)
+    processor = AudioProcessor(model_size=model_size, nltk_data_path=nltk_data_path)
     
     # Run pipeline
     results = processor.process_pipeline(file_name, language)
