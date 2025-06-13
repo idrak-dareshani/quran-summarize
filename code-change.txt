@@ -1,0 +1,29 @@
+    def process_sentences_regex(self, text: str, language: str, output_file: str = None) -> List[str]:
+        """
+        Process text into sentences using language-specific tools.
+        """
+        if output_file is None:
+            output_file = f"analysis/{language}_sentences.txt"
+
+        sentences = []
+        if language == "ur" and self.urduhack:
+            doc = self.urduhack.Document(text)
+            sentences = [sent.text for sent in doc.sentences]
+        else:
+            import re
+            pattern = self.sentence_patterns.get(language, r'[.!?]')
+            sentences = re.split(pattern, text)
+            sentences = [s.strip() for s in sentences if s.strip()]
+
+        with open(output_file, "w", encoding="utf-8") as f:
+            for sent in sentences:
+                f.write(sent + "\n")
+        return sentences
+
+    def _clean_text(self, text: str, language: str) -> str:
+        # Remove extra whitespace
+        text = re.sub(r'\s+', ' ', text.strip())
+        if language == 'ur' and self.urduhack:
+            text = self.urduhack.normalize(text)
+        # ...existing code...
+        return text.strip()        

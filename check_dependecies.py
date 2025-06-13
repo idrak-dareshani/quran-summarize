@@ -26,12 +26,6 @@ def test_imports():
     except ImportError as e:
         test_results['transformers'] = f"❌ Transformers: {e}"
     
-    try:
-        import nltk
-        test_results['nltk'] = f"✅ NLTK {nltk.__version__}"
-    except ImportError as e:
-        test_results['nltk'] = f"❌ NLTK: {e}"
-    
     # Test optional packages
     try:
         import librosa

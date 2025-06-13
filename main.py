@@ -18,13 +18,31 @@ from typing import List, Generator, Optional, Dict, Tuple
 import whisper
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 
+def check_dependencies():
+    """Check for required Python packages and models."""
+    import importlib
+    required_packages = [
+        "os", "re", "time", "logging", "pathlib",
+        "transformers", "torch", "whisper", "urduhack"
+    ]
+    missing = []
+    for pkg in required_packages:
+        try:
+            importlib.import_module(pkg)
+        except ImportError:
+            missing.append(pkg)
+    if missing:
+        raise ImportError(
+            f"Missing required packages: {', '.join(missing)}. "
+            "Please install them before running this script."
+        )
 
 class AudioProcessor:
     """Handles multilingual audio transcription and text processing pipeline."""
     
     def __init__(self, model_size: str = "medium"):
         """
-        Initialize the MultilingualAudioProcessor.
+        Initialize the AudioProcessor.
         
         Args:
             model_size: Whisper model size ('tiny', 'base', 'small', 'medium', 'large')
@@ -58,6 +76,15 @@ class AudioProcessor:
                 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they'
             }
         }
+
+        try:
+            import urduhack
+            urduhack.download()
+            urduhack.initialize()
+            self.urduhack = urduhack
+        except ImportError:
+            self.urduhack = None
+            self.logger.warning("UrduHack not available. Urdu sentences segmentation will use regex fallback.")
         
     def _setup_logger(self) -> logging.Logger:
         """Set up logging configuration."""
@@ -368,9 +395,9 @@ class AudioProcessor:
         
         # Adjust parameters based on language
         if max_length is None:
-            max_length = 17 if language == 'ur' else 150
+            max_length = 8 if language == 'ur' else 150
         if min_length is None:
-            min_length = 8 if language == 'ur' else 50
+            min_length = 3 if language == 'ur' else 50
         
         summarizer = self._load_summarizer(language)
         summaries = []
@@ -472,8 +499,8 @@ class AudioProcessor:
         try:
             # Step 1: Transcribe audio
             audio_file = f"audio/{file_name}.mp3"
-            transcription, detected_language = self.transcribe_audio(
-                audio_file, language, auto_detect=auto_detect
+            transcription, detected_language = self.transcribe_audio(audio_file, 
+                language, auto_detect=auto_detect
             )
             results['transcription'] = transcription
             results['language'] = detected_language
@@ -519,38 +546,89 @@ class AudioProcessor:
             
         return results
 
+    def process_batch(self, audio_dir: str, language: str = "ur", auto_detect: bool = False) -> Dict[str, dict]:
+        """
+        Process all audio files in a directory.
+        
+        Args:
+            audio_dir: Directory containing audio files
+            language: Language code for transcription
+            auto_detect: Whether to auto-detect language
+            
+        Returns:
+            Dictionary mapping file names to their processing results
+        """
+        results = {}
+        audio_path = Path(audio_dir)
+        for audio_file in audio_path.glob("*.mp3"):
+            file_name = audio_file.stem
+            try:
+                self.logger.info(f"Processing file: {audio_file}")
+                results[file_name] = self.process_pipeline(file_name, language, auto_detect)
+            except Exception as e:
+                results[file_name] = {"status": "error", "error": str(e)}
+        return results
 
 def main():
     """Main function to run the multilingual audio processing pipeline."""
+
+    # Check for required dependencies
+    check_dependencies()
+
     # Configuration
-    file_name = "001 - SURAH AL-FATIAH"  # Your audio file name (without extension)
+    batch_mode = True  # Set to True to process all files in 'audio' directory
+    audio_dir = "audio"  # Directory containing audio files
     language = "ur"  # Default to Urdu, but can be "en" for English
     model_size = "medium"  # Recommended for better accuracy
-    auto_detect = False  # Set to True to auto-detect language
+    auto_detect = True  # Set to True to auto-detect language
     
     # Initialize processor
     processor = AudioProcessor(model_size=model_size)
-    
-    # Run pipeline
-    results = processor.process_pipeline(file_name, language, auto_detect=auto_detect)
-    
-    # Print results
-    if results['status'] == 'success':
-        lang_name = "Urdu" if results['language'] == 'ur' else "English"
-        print(f"✅ {lang_name} audio processing completed successfully!")
-        print(f"🗣️ Detected language: {lang_name}")
-        print(f"📊 Word count: {results['word_count']}")
-        print(f"📝 Processed {results['sentence_count']} sentences")
-        print(f"🔑 Key phrases: {', '.join(results['key_phrases'][:5])}")
-        print(f"📄 Summary saved to {results['summary_file']}")
         
-        # Display first few lines of summary
-        print(f"\n📋 Summary preview:")
-        summary_preview = results['summary'][:200] + "..." if len(results['summary']) > 200 else results['summary']
-        print(summary_preview)
+    if batch_mode:
+        # Run batch processing
+        results = processor.process_batch(audio_dir, language, auto_detect)
         
+        # Print results summary
+        for file_name, result in results.items():
+            if result['status'] == 'success':
+                lang_name = "Urdu" if result['language'] == 'ur' else "English"
+                print(f"✅ {lang_name} audio processing completed for {file_name}!")
+                print(f"🗣️ Detected language: {lang_name}")
+                print(f"📊 Word count: {result['word_count']}")
+                print(f"📝 Processed {result['sentence_count']} sentences")
+                print(f"🔑 Key phrases: {', '.join(result['key_phrases'][:5])}")
+                print(f"📄 Summary saved to {result['summary_file']}\n")
+            else:
+                print(f"❌ Processing failed for {file_name}: {result['error']}\n")
+                
     else:
-        print(f"❌ Processing failed: {results['error']}")
+        # Single file processing example
+        file_name = "001 - SURAH AL-FATIAH"  # Your audio file name (without extension)
+        language = "ur"  # Default to Urdu, but can be "en" for English
+        model_size = "medium"  # Recommended for better accuracy
+        auto_detect = True  # Set to True to auto-detect language
+        
+        # Run pipeline
+        results = processor.process_pipeline(file_name, language)
+        
+        # Print results
+        if results['status'] == 'success':
+            lang_name = "Urdu" if results['language'] == 'ur' else "English"
+            print(f"✅ {lang_name} audio processing completed successfully!")
+            print(f"🗣️ Detected language: {lang_name}")
+            print(f"📊 Word count: {results['word_count']}")
+            print(f"📝 Processed {results['sentence_count']} sentences")
+            print(f"🔑 Key phrases: {', '.join(results['key_phrases'][:5])}")
+            print(f"📄 Summary saved to {results['summary_file']}")
+            
+            # Display first few lines of summary
+            print(f"\n📋 Summary preview:")
+            summary_preview = results['summary'][:200] + "..." if len(results['summary']) > 200 else results['summary']
+            print(summary_preview)
+            
+        else:
+            print(f"❌ Processing failed: {results['error']}")
 
 
 if __name__ == "__main__":
