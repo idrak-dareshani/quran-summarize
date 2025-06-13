@@ -15,6 +15,7 @@ import logging
 from pathlib import Path
 from typing import List, Generator, Optional, Dict, Tuple
 
+import urduhack.utils
 import whisper
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 
@@ -80,8 +81,8 @@ class AudioProcessor:
         try:
             import urduhack
             urduhack.download()
-            urduhack.initialize()
-            self.urduhack = urduhack
+            nlp = urduhack.Pipeline()
+            self.urduhack = nlp
         except ImportError:
             self.urduhack = None
             self.logger.warning("UrduHack not available. Urdu sentences segmentation will use regex fallback.")
@@ -279,7 +280,9 @@ class AudioProcessor:
         # Remove extra whitespace
         text = re.sub(r'\s+', ' ', text.strip())
         
-        if language == 'ur':
+        if language == 'ur' and self.urduhack:
+            text = self.urduhack.normalize(text)
+        elif language == 'ur':
             # Urdu-specific cleaning
             text = re.sub(r'\s+([۔؟!])', r'\1', text)  # Remove space before punctuation
             text = re.sub(r'([۔؟!])\s*', r'\1 ', text)  # Ensure space after punctuation
@@ -294,7 +297,7 @@ class AudioProcessor:
         
         return text.strip()
     
-    def process_sentences_regex(self, text: str, language: str, 
+    def process_sentences_enhanced(self, text: str, language: str, 
                                output_file: str = None) -> List[str]:
         """
         Process text into sentences using language-specific regex patterns.
@@ -309,7 +312,62 @@ class AudioProcessor:
         """
         if output_file is None:
             output_file = f"analysis/sentences_{language}.txt"
+
+        processed_sentences = []
+
+        if language == 'ur' and self.urduhack is not None:
+            # Use UrduHack for better Urdu sentence segmentation
+            try:
+                self.logger.info("Using UrduHack for Urdu sentence segmentation")
+                sentences = self.urduhack.tokenization.sentence_tokenizer(text)
+                
+                # Clean and filter sentences
+                for sentence in sentences:
+                    sentence = sentence.strip()
+                    if sentence and len(sentence.split()) >= 3:  # Minimum 3 words
+                        # Ensure proper Urdu punctuation
+                        if not sentence.endswith(('۔', '؟', '!')):
+                            sentence += '۔'
+                        processed_sentences.append(sentence)
+                        
+            except Exception as e:
+                self.logger.warning(f"UrduHack sentence tokenization failed: {e}")
+                self.logger.info("Falling back to regex for Urdu")
+                processed_sentences = self._regex_sentence_split(text, language)
         
+        elif language == 'ur':
+            # Fallback to regex for Urdu when UrduHack is not available
+            self.logger.info("Using regex fallback for Urdu sentence segmentation")
+            processed_sentences = self._regex_sentence_split(text, language)
+        
+        else:
+            # Use regex for English (no change needed)
+            self.logger.info("Using regex for English sentence segmentation")
+            processed_sentences = self._regex_sentence_split(text, language)
+        
+        # Save sentences
+        with open(output_file, 'w', encoding="utf-8") as f:
+            f.write(f"Language: {language}\n")
+            f.write(f"Total sentences: {len(processed_sentences)}\n")
+            f.write(f"Processing method: {'UrduHack' if language == 'ur' and self.urduhack else 'Regex'}\n\n")
+            for i, sentence in enumerate(processed_sentences, 1):
+                f.write(f"{i}. {sentence.strip()}\n")
+        
+        method = "UrduHack" if language == 'ur' and self.urduhack else "regex"
+        self.logger.info(f"Processed {len(processed_sentences)} sentences for {language} using {method}, saved to {output_file}")
+        return processed_sentences
+
+    def _regex_sentence_split(self, text: str, language: str) -> List[str]:
+        """
+        Helper method for regex-based sentence splitting.
+        
+        Args:
+            text: Input text
+            language: Language code
+            
+        Returns:
+            List of sentences
+        """
         # Get language-specific pattern
         pattern = self.sentence_patterns.get(language, self.sentence_patterns['en'])
         
@@ -340,15 +398,71 @@ class AudioProcessor:
         if processed_sentences:
             final_sentences.append(processed_sentences[-1])
         
-        # Save sentences
-        with open(output_file, 'w', encoding="utf-8") as f:
-            f.write(f"Language: {language}\n")
-            f.write(f"Total sentences: {len(final_sentences)}\n\n")
-            for i, sentence in enumerate(final_sentences, 1):
-                f.write(f"{i}. {sentence.strip()}\n")
-        
-        self.logger.info(f"Processed {len(final_sentences)} sentences for {language}, saved to {output_file}")
         return final_sentences
+
+    def extract_key_phrases_enhanced(self, text: str, language: str) -> List[str]:
+        """
+        Enhanced key phrase extraction using UrduHack for Urdu text processing.
+        
+        Args:
+            text: Input text
+            language: Language code
+            
+        Returns:
+            List of key phrases
+        """
+        if language == 'ur' and self.urduhack is not None:
+            try:
+                # Use UrduHack for better Urdu text processing
+                self.logger.info("Using UrduHack for Urdu key phrase extraction")
+                
+                # Tokenize using UrduHack
+                words = self.urduhack.tokenization.word_tokenizer(text)
+                
+                # Remove stop words using UrduHack's built-in functionality
+                filtered_words = []
+                for word in words:
+                    # Basic filtering - you can enhance this further
+                    if (len(word) > 2 and 
+                        word not in self.stop_words['ur'] and
+                        not word.isdigit() and
+                        re.match(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+', word)):
+                        filtered_words.append(word)
+                
+                # Count frequency
+                word_freq = {}
+                for word in filtered_words:
+                    word_freq[word] = word_freq.get(word, 0) + 1
+                
+                # Get top words
+                top_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:10]
+                return [word for word, freq in top_words]
+                
+            except Exception as e:
+                self.logger.warning(f"UrduHack key phrase extraction failed: {e}")
+                self.logger.info("Falling back to regex for Urdu key phrases")
+        
+        # Fallback to regex method (original implementation)
+        if language == 'ur':
+            # Extract Urdu words
+            words = re.findall(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+', text)
+        else:
+            # Extract English words
+            words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+        
+        # Get language-specific stop words
+        stop_words = self.stop_words.get(language, self.stop_words['en'])
+        
+        # Count word frequency
+        word_freq = {}
+        for word in words:
+            if word not in stop_words and len(word) > 2:
+                word_freq[word] = word_freq.get(word, 0) + 1
+        
+        # Get top words
+        top_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:10]
+        
+        return [word for word, freq in top_words]
     
     def chunk_text(self, text: str, language: str, max_words: int = None) -> Generator[str, None, None]:
         """
@@ -449,38 +563,6 @@ class AudioProcessor:
                 sentences = text.split('.')[:3]
                 return '.'.join(sentences[:2]) + '.'
     
-    def extract_key_phrases(self, text: str, language: str) -> List[str]:
-        """
-        Extract key phrases from text using language-specific frequency analysis.
-        
-        Args:
-            text: Input text
-            language: Language code
-            
-        Returns:
-            List of key phrases
-        """
-        if language == 'ur':
-            # Extract Urdu words
-            words = re.findall(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+', text)
-        else:
-            # Extract English words
-            words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
-        
-        # Get language-specific stop words
-        stop_words = self.stop_words.get(language, self.stop_words['en'])
-        
-        # Count word frequency
-        word_freq = {}
-        for word in words:
-            if word not in stop_words and len(word) > 2:
-                word_freq[word] = word_freq.get(word, 0) + 1
-        
-        # Get top words
-        top_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:10]
-        
-        return [word for word, freq in top_words]
-    
     def process_pipeline(self, file_name: str, language: str = "ur", 
                         auto_detect: bool = False) -> dict:
         """
@@ -507,12 +589,12 @@ class AudioProcessor:
             results['word_count'] = len(transcription.split())
             
             # Step 2: Process sentences using regex
-            sentences = self.process_sentences_regex(transcription, detected_language)
+            sentences = self.process_sentences_enhanced(transcription, detected_language)
             results['sentences'] = sentences
             results['sentence_count'] = len(sentences)
             
             # Step 3: Extract key phrases
-            key_phrases = self.extract_key_phrases(transcription, detected_language)
+            key_phrases = self.extract_key_phrases_enhanced(transcription, detected_language)
             results['key_phrases'] = key_phrases
             
             # Step 4: Generate summary
