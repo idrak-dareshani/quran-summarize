@@ -5,26 +5,25 @@ This module provides functionality to:
 1. Transcribe Urdu and English audio files using OpenAI Whisper
 2. Process transcriptions into sentences using language-specific approaches
 3. Generate summaries using appropriate multilingual models
-4. Auto-detect language or use specified language
 """
 
 import os
 import re
 import time
 import logging
+import unicodedata
 from pathlib import Path
 from typing import List, Generator, Optional, Dict, Tuple
 
-import urduhack.utils
 import whisper
-from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
+from transformers import pipeline
 
 def check_dependencies():
     """Check for required Python packages and models."""
     import importlib
     required_packages = [
         "os", "re", "time", "logging", "pathlib",
-        "transformers", "torch", "whisper", "urduhack"
+        "transformers", "torch", "whisper", "unicodedata"
     ]
     missing = []
     for pkg in required_packages:
@@ -77,15 +76,6 @@ class AudioProcessor:
                 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they'
             }
         }
-
-        try:
-            import urduhack
-            urduhack.download()
-            nlp = urduhack.Pipeline()
-            self.urduhack = nlp
-        except ImportError:
-            self.urduhack = None
-            self.logger.warning("UrduHack not available. Urdu sentences segmentation will use regex fallback.")
         
     def _setup_logger(self) -> logging.Logger:
         """Set up logging configuration."""
@@ -155,7 +145,12 @@ class AudioProcessor:
             return torch.cuda.is_available()
         except ImportError:
             return False
-    
+
+    def normalize_urdu(self, text: str) -> str:
+        text = unicodedata.normalize("NFKC", text)
+        text = text.replace("ک", "ك").replace("ی", "ي")
+        return re.sub(r'\s+', ' ', text.strip())
+
     def detect_language(self, text: str) -> str:
         """
         Simple language detection based on character sets.
@@ -167,7 +162,7 @@ class AudioProcessor:
             Language code ('ur' or 'en')
         """
         # Count Urdu/Arabic characters
-        urdu_chars = len(re.findall(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]', text))
+        urdu_chars = len(re.findall(r'[\u0600-\u06FF]', text))
         
         # Count English characters
         english_chars = len(re.findall(r'[a-zA-Z]', text))
@@ -179,7 +174,7 @@ class AudioProcessor:
             return 'en'
     
     def transcribe_audio(self, audio_file: str, language: str = "ur", 
-                        output_file: str = None, auto_detect: bool = False) -> Tuple[str, str]:
+                        output_file: str = None) -> str:
         """
         Transcribe audio file to text with multilingual support.
         
@@ -190,7 +185,7 @@ class AudioProcessor:
             auto_detect: Whether to auto-detect language after initial transcription
             
         Returns:
-            Tuple of (transcribed_text, detected_language)
+            str = transcribed_text
         """
         if not os.path.exists(audio_file):
             raise FileNotFoundError(f"Audio file not found: {audio_file}")
@@ -209,34 +204,17 @@ class AudioProcessor:
             # Enhanced options for better transcription
             result = model.transcribe(
                 audio_file, 
-                language=language if not auto_detect else None,
+                language=language,
                 fp16=False,  # Better for CPU processing
                 verbose=True,
                 word_timestamps=True  # Get word-level timestamps
             )
             
             transcription = result["text"]
-            
-            # Auto-detect language if requested
-            detected_language = language
-            if auto_detect:
-                detected_language = self.detect_language(transcription)
-                self.logger.info(f"Auto-detected language: {detected_language}")
-                
-                # Re-transcribe with detected language if different
-                if detected_language != language:
-                    self.logger.info(f"Re-transcribing with detected language: {detected_language}")
-                    result = model.transcribe(
-                        audio_file, 
-                        language=detected_language,
-                        fp16=False,
-                        verbose=True,
-                        word_timestamps=True
-                    )
-                    transcription = result["text"]
+            transcription = self.normalize_urdu(transcription) if language == 'ur' else transcription
             
             # Post-process transcription based on language
-            transcription = self._clean_text(transcription, detected_language)
+            transcription = self._clean_text(transcription, language)
             
             # Calculate processing time
             elapsed = time.time() - start_time
@@ -246,21 +224,21 @@ class AudioProcessor:
             
             # Save transcription with UTF-8 encoding
             with open(output_file, "w", encoding="utf-8") as f:
-                f.write(f"Language: {detected_language}\n")
+                f.write(f"Language: {language}\n")
                 f.write(f"Transcription:\n{transcription}")
             
             # Also save detailed results if available
             if "segments" in result:
                 detailed_file = output_file.replace(".txt", "_detailed.txt")
                 with open(detailed_file, "w", encoding="utf-8") as f:
-                    f.write(f"Language: {detected_language}\n")
+                    f.write(f"Language: {language}\n")
                     f.write("Detailed Transcription with Timestamps:\n\n")
                     for segment in result["segments"]:
                         f.write(f"[{segment['start']:.2f}s - {segment['end']:.2f}s]: {segment['text']}\n")
                 self.logger.info(f"Detailed transcription saved to {detailed_file}")
             
             self.logger.info(f"Transcription saved to {output_file}")
-            return transcription, detected_language
+            return transcription
             
         except Exception as e:
             self.logger.error(f"Error during transcription: {str(e)}")
@@ -280,9 +258,7 @@ class AudioProcessor:
         # Remove extra whitespace
         text = re.sub(r'\s+', ' ', text.strip())
         
-        if language == 'ur' and self.urduhack:
-            text = self.urduhack.normalize(text)
-        elif language == 'ur':
+        if language == 'ur':
             # Urdu-specific cleaning
             text = re.sub(r'\s+([۔؟!])', r'\1', text)  # Remove space before punctuation
             text = re.sub(r'([۔؟!])\s*', r'\1 ', text)  # Ensure space after punctuation
@@ -296,8 +272,8 @@ class AudioProcessor:
             text = re.sub(r'[^\w\s.!?,:;\'\"()-]', '', text)
         
         return text.strip()
-    
-    def process_sentences_enhanced(self, text: str, language: str, 
+
+    def process_sentences(self, text: str, language: str, 
                                output_file: str = None) -> List[str]:
         """
         Process text into sentences using language-specific regex patterns.
@@ -315,33 +291,13 @@ class AudioProcessor:
 
         processed_sentences = []
 
-        if language == 'ur' and self.urduhack is not None:
-            # Use UrduHack for better Urdu sentence segmentation
-            try:
-                self.logger.info("Using UrduHack for Urdu sentence segmentation")
-                sentences = self.urduhack.tokenization.sentence_tokenizer(text)
-                
-                # Clean and filter sentences
-                for sentence in sentences:
-                    sentence = sentence.strip()
-                    if sentence and len(sentence.split()) >= 3:  # Minimum 3 words
-                        # Ensure proper Urdu punctuation
-                        if not sentence.endswith(('۔', '؟', '!')):
-                            sentence += '۔'
-                        processed_sentences.append(sentence)
-                        
-            except Exception as e:
-                self.logger.warning(f"UrduHack sentence tokenization failed: {e}")
-                self.logger.info("Falling back to regex for Urdu")
-                processed_sentences = self._regex_sentence_split(text, language)
-        
-        elif language == 'ur':
-            # Fallback to regex for Urdu when UrduHack is not available
-            self.logger.info("Using regex fallback for Urdu sentence segmentation")
+        if language == 'ur':
+            # Use regex for Urdu 
+            self.logger.info("Using regex for Urdu sentence segmentation")
             processed_sentences = self._regex_sentence_split(text, language)
         
         else:
-            # Use regex for English (no change needed)
+            # Use regex for English
             self.logger.info("Using regex for English sentence segmentation")
             processed_sentences = self._regex_sentence_split(text, language)
         
@@ -349,12 +305,10 @@ class AudioProcessor:
         with open(output_file, 'w', encoding="utf-8") as f:
             f.write(f"Language: {language}\n")
             f.write(f"Total sentences: {len(processed_sentences)}\n")
-            f.write(f"Processing method: {'UrduHack' if language == 'ur' and self.urduhack else 'Regex'}\n\n")
             for i, sentence in enumerate(processed_sentences, 1):
                 f.write(f"{i}. {sentence.strip()}\n")
         
-        method = "UrduHack" if language == 'ur' and self.urduhack else "regex"
-        self.logger.info(f"Processed {len(processed_sentences)} sentences for {language} using {method}, saved to {output_file}")
+        self.logger.info(f"Processed {len(processed_sentences)} sentences for {language}, saved to {output_file}")
         return processed_sentences
 
     def _regex_sentence_split(self, text: str, language: str) -> List[str]:
@@ -400,7 +354,7 @@ class AudioProcessor:
         
         return final_sentences
 
-    def extract_key_phrases_enhanced(self, text: str, language: str) -> List[str]:
+    def extract_key_phrases(self, text: str, language: str) -> List[str]:
         """
         Enhanced key phrase extraction using UrduHack for Urdu text processing.
         
@@ -411,47 +365,15 @@ class AudioProcessor:
         Returns:
             List of key phrases
         """
-        if language == 'ur' and self.urduhack is not None:
-            try:
-                # Use UrduHack for better Urdu text processing
-                self.logger.info("Using UrduHack for Urdu key phrase extraction")
-                
-                # Tokenize using UrduHack
-                words = self.urduhack.tokenization.word_tokenizer(text)
-                
-                # Remove stop words using UrduHack's built-in functionality
-                filtered_words = []
-                for word in words:
-                    # Basic filtering - you can enhance this further
-                    if (len(word) > 2 and 
-                        word not in self.stop_words['ur'] and
-                        not word.isdigit() and
-                        re.match(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+', word)):
-                        filtered_words.append(word)
-                
-                # Count frequency
-                word_freq = {}
-                for word in filtered_words:
-                    word_freq[word] = word_freq.get(word, 0) + 1
-                
-                # Get top words
-                top_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:10]
-                return [word for word, freq in top_words]
-                
-            except Exception as e:
-                self.logger.warning(f"UrduHack key phrase extraction failed: {e}")
-                self.logger.info("Falling back to regex for Urdu key phrases")
-        
-        # Fallback to regex method (original implementation)
         if language == 'ur':
             # Extract Urdu words
-            words = re.findall(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+', text)
+            words = re.findall(r'[\u0600-\u06FF]{2,}', text)
         else:
             # Extract English words
-            words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+            words = re.findall(r'\b[a-zA-Z]{2,}\b', text.lower())
         
         # Get language-specific stop words
-        stop_words = self.stop_words.get(language, self.stop_words['en'])
+        stop_words = self.stop_words.get(language)
         
         # Count word frequency
         word_freq = {}
@@ -462,7 +384,7 @@ class AudioProcessor:
         # Get top words
         top_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:10]
         
-        return [word for word, freq in top_words]
+        return [word for word, word_freq in top_words]
     
     def chunk_text(self, text: str, language: str, max_words: int = None) -> Generator[str, None, None]:
         """
@@ -534,8 +456,7 @@ class AudioProcessor:
                         summary_input, 
                         max_length=max_length, 
                         min_length=min_length, 
-                        do_sample=False,
-                        truncation=True
+                        do_sample=False
                     )
                     summaries.append(summary[0]['summary_text'])
                     
@@ -563,8 +484,7 @@ class AudioProcessor:
                 sentences = text.split('.')[:3]
                 return '.'.join(sentences[:2]) + '.'
     
-    def process_pipeline(self, file_name: str, language: str = "ur", 
-                        auto_detect: bool = False) -> dict:
+    def process_pipeline(self, file_name: str, language: str = "ur") -> dict:
         """
         Run the complete multilingual audio processing pipeline.
         
@@ -581,30 +501,28 @@ class AudioProcessor:
         try:
             # Step 1: Transcribe audio
             audio_file = f"audio/{file_name}.mp3"
-            transcription, detected_language = self.transcribe_audio(audio_file, 
-                language, auto_detect=auto_detect
-            )
+            transcription = self.transcribe_audio(audio_file, language)
             results['transcription'] = transcription
-            results['language'] = detected_language
+            results['language'] = language
             results['word_count'] = len(transcription.split())
             
             # Step 2: Process sentences using regex
-            sentences = self.process_sentences_enhanced(transcription, detected_language)
+            sentences = self.process_sentences(transcription, language)
             results['sentences'] = sentences
             results['sentence_count'] = len(sentences)
             
             # Step 3: Extract key phrases
-            key_phrases = self.extract_key_phrases_enhanced(transcription, detected_language)
+            key_phrases = self.extract_key_phrases(transcription, language)
             results['key_phrases'] = key_phrases
             
             # Step 4: Generate summary
             combined_text = " ".join(sentences)
-            summary = self.summarize_text(combined_text, detected_language)
+            summary = self.summarize_text(combined_text, language)
             
             # Save summary
-            summary_file = f"analysis/{file_name}_{detected_language}_summary.txt"
+            summary_file = f"analysis/{file_name}_{language}_summary.txt"
             with open(summary_file, "w", encoding="utf-8") as f:
-                if detected_language == 'ur':
+                if language == 'ur':
                     f.write("=== خلاصہ (Summary) ===\n")
                     f.write(summary)
                     f.write("\n\n=== اہم الفاظ (Key Phrases) ===\n")
@@ -618,7 +536,7 @@ class AudioProcessor:
             results['summary_file'] = summary_file
             results['status'] = 'success'
             
-            self.logger.info(f"Multilingual audio processing pipeline completed successfully for {detected_language}")
+            self.logger.info(f"Multilingual audio processing pipeline completed successfully for {language}")
             
         except Exception as e:
             error_msg = f"Pipeline failed: {str(e)}"
@@ -628,7 +546,7 @@ class AudioProcessor:
             
         return results
 
-    def process_batch(self, audio_dir: str, language: str = "ur", auto_detect: bool = False) -> Dict[str, dict]:
+    def process_batch(self, audio_dir: str, language: str = "ur") -> Dict[str, dict]:
         """
         Process all audio files in a directory.
         
@@ -646,7 +564,7 @@ class AudioProcessor:
             file_name = audio_file.stem
             try:
                 self.logger.info(f"Processing file: {audio_file}")
-                results[file_name] = self.process_pipeline(file_name, language, auto_detect)
+                results[file_name] = self.process_pipeline(file_name, language)
             except Exception as e:
                 results[file_name] = {"status": "error", "error": str(e)}
         return results
@@ -658,18 +576,17 @@ def main():
     check_dependencies()
 
     # Configuration
-    batch_mode = True  # Set to True to process all files in 'audio' directory
+    batch_mode = False  # Set to True to process all files in 'audio' directory
     audio_dir = "audio"  # Directory containing audio files
     language = "ur"  # Default to Urdu, but can be "en" for English
-    model_size = "medium"  # Recommended for better accuracy
-    auto_detect = True  # Set to True to auto-detect language
+    model_size = "base"  # Recommended for better accuracy
     
     # Initialize processor
     processor = AudioProcessor(model_size=model_size)
         
     if batch_mode:
         # Run batch processing
-        results = processor.process_batch(audio_dir, language, auto_detect)
+        results = processor.process_batch(audio_dir, language)
         
         # Print results summary
         for file_name, result in results.items():
@@ -687,9 +604,6 @@ def main():
     else:
         # Single file processing example
         file_name = "001 - SURAH AL-FATIAH"  # Your audio file name (without extension)
-        language = "ur"  # Default to Urdu, but can be "en" for English
-        model_size = "medium"  # Recommended for better accuracy
-        auto_detect = True  # Set to True to auto-detect language
         
         # Run pipeline
         results = processor.process_pipeline(file_name, language)
