@@ -1,70 +1,87 @@
-# Transcribe
+# 🎙️ Transcribe – Multilingual Audio Transcription & Summarization
 
-**Transcribe** is a Python-based project designed to transcribe audio files (`.mp3`, `.wav`) and summarize their content for improved comprehension. It is useful for converting speech to text and generating concise summaries, ideal for lectures, interviews, podcasts, and more.
+**Transcribe** is a comprehensive pipeline for transcribing and summarizing Urdu and English audio files. Built with Whisper and Transformer models, it automates the process from raw `.mp3` input to structured summaries and key phrase extraction.
 
-## 📌 Description
+## 📌 Features
 
-This tool leverages state-of-the-art speech recognition and natural language processing (NLP) models to:
-- Convert spoken content into written text using OpenAI’s Whisper.
-- Clean and split the transcription into manageable sections.
-- Generate summaries using transformer-based models for quick understanding.
+- 🎧 Transcribes audio files in **Urdu** and **English** using OpenAI's Whisper.
+- 🧠 Detects language and loads appropriate **summarization model** (BART for English, mT5 for Urdu).
+- ✂️ Cleans and splits transcription into structured sentences.
+- 📑 Generates summaries and extracts key phrases.
+- 📂 Supports both **single file** and **batch processing** modes.
+- 💻 CPU and GPU support for summarization (automatically selected).
 
-## 🧰 Technologies Used
+## 🛠 Technologies Used
 
-- **Python 3.13**
-- **Jupyter Notebook**
-- **OpenAI Whisper** – for transcription
-- **NLTK** – for text preprocessing
-- **Hugging Face Transformers** – for summarization
+- [Python](https://www.python.org/)
+- [Whisper](https://github.com/openai/whisper)
+- [Transformers (HuggingFace)](https://huggingface.co/docs/transformers/)
+- [Torch](https://pytorch.org/)
+- [Regex, Logging, Unicode normalization]
 
-## 🛠 Installation
+## 🧰 Installation
 
-To set up the project locally:
-
-### 1. Clone the repository
 ```bash
-git clone https://github.com/idrak-dareshani/transcribe_audio_file.git
-cd transcribe_audio_file
+# 1. Clone the repository
+git clone https://github.com/your-username/transcribe.git
+cd transcribe
 ```
-### 2. Install required packages
+
 ```bash
+# 2. Set up a virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+```bash
+# 3. Install required packages
 pip install git+https://github.com/openai/whisper.git
-pip install nltk transformers time
+pip install transformers torch
 ```
-
-> 💡 You can also open this project in **VS Code** or **PyCharm** and ensure your environment is set up with the above dependencies.
+⚠️ Ensure your system has ffmpeg installed. Whisper requires it to process audio.
 
 ## 🚀 Usage
+📁 Audio File Placement
+Place your .mp3 files inside the audio/ directory. Use clear file names (e.g., 001 - SURAH AL-FATIAH.mp3).
 
-Run the Jupyter notebooks in the following sequence:
+## ▶️ Run Transcription & Summarization
+### Single File Mode
+Edit the file_name variable in main.py and run:
+```bash
+python main.py
+```
+### Batch Mode
+Enable batch_mode = True in main.py to automatically process all .mp3 files in the audio/ directory.
 
-1. `transcribe.ipynb` – Load your audio file and transcribe the spoken content.
-2. `cleanandsplit.ipynb` – Process and split the raw transcript.
-3. `summarize.ipynb` – Generate summaries using NLP models.
+## 📂 Output
+* Transcriptions saved to transcripts/
+* Sentence splits and summaries saved to analysis/
+* Key phrases displayed and saved in summary files
 
-> Note: For better performance and faster processing, you may use a GPU-enabled environment.
+🌐 Languages Supported
+*Urdu (default)
+*English
 
-## 💡 Features
-
-* Supports `.mp3` and `.wav` formats.
-* Modular notebook structure for flexibility.
-* Can be extended to support multilingual transcription and summarization.
-* Ideal for educational, journalistic, and research purposes.
+## 🧪 Example Output
+```text
+✅ Urdu audio processing completed successfully!
+🗣️ Detected language: Urdu
+📊 Word count: 587
+📝 Processed 38 sentences
+🔑 Key phrases: قرآن, اللہ, انسان, علم, زندگی
+📄 Summary saved to analysis/001 - SURAH AL-FATIAH_ur_summary.txt
+```
 
 ## 🤝 Contributing
+* Contributions are welcome!
+* Improve model selection or chunking strategies
+* Add support for more languages
+* Enhance sentence segmentation or output formatting
+* Add GUI or Web interface
 
-Contributions are welcome! You may consider:
+Please fork the repository, make your changes, and submit a pull request.
 
-* Integrating larger Whisper models or GPU support.
-* Adding multilingual support for transcription.
-* Enhancing formatting and coherence of summaries.
+## 📄 License
+This project is licensed under the GNU General Public License (GPL).
 
-To contribute, fork the repository, create a new branch, and submit a pull request.
-
-## 📝 License
-
-This project is licensed under the **GNU General Public License (GPL)**.
-
----
-
-For issues, suggestions, or improvements, feel free to open a GitHub [Issue](https://github.com/idrak-dareshani/transcribe/issues).
+For questions or support, feel free to open an [issue.](https://github.com/idrak-dareshani/transcribe_audio_file/issues)
