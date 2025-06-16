@@ -579,7 +579,7 @@ def main():
     batch_mode = False  # Set to True to process all files in 'audio' directory
     audio_dir = "audio"  # Directory containing audio files
     language = "ur"  # Default to Urdu, but can be "en" for English
-    model_size = "base"  # Recommended for better accuracy
+    model_size = "medium"  # Recommended for better accuracy
     
     # Initialize processor
     processor = AudioProcessor(model_size=model_size)
