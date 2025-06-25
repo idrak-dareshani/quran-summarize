@@ -6,7 +6,7 @@ from src.utils import load_cached_translation, save_translation_to_cache
 
 JSON_DIR = "data/json"
 
-st.set_page_config(layout="wide")
+st.set_page_config(page_title="Quran Summarizer", layout="wide")
 st.title("📖 Quranic Lecture Summarizer")
 
 # Language selection (excluding English)
