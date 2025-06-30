@@ -4,7 +4,7 @@ import json
 from deep_translator import GoogleTranslator
 from src.utils import load_cached_translation, save_translation_to_cache
 
-JSON_DIR = "data/json"
+DATA_DIR = "data"
 
 st.set_page_config(page_title="Quran Summarizer", layout="wide")
 st.title("📖 Quranic Lecture Summarizer")
@@ -23,8 +23,8 @@ language_map = {
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    json_files = sorted(f for f in os.listdir(JSON_DIR) if f.endswith(".json"))
-    selected_file = st.selectbox("📁 Select Surah (Lecture)", json_files, key="file")
+    text_files = sorted(f for f in os.listdir(DATA_DIR) if f.endswith(".txt"))
+    selected_file = st.selectbox("📁 Select Surah (Lecture)", text_files, key="file")
 
 with col2:
     selected_lang_display = st.selectbox("🌐 View alongside English", list(language_map.keys()), key="lang")
@@ -32,14 +32,14 @@ with col2:
 
 # 🧾 Display logic
 if selected_file:
-    json_path = os.path.join(JSON_DIR, selected_file)
+    data_path = os.path.join(DATA_DIR, selected_file)
 
-    if os.path.exists(json_path):
-        with open(json_path, 'r', encoding='utf-8') as f:
-            json_data = json.load(f)
-            urdu_text = json_data.get("text", "❌ No corrected text found.")
+    if os.path.exists(data_path):
+        with open(data_path, 'r', encoding='utf-8') as f:
+            text_data = f.read()
+            urdu_text = text_data.strip()
     else:
-        urdu_text = "❌ JSON file not found."
+        urdu_text = "❌ TXT file not found."
 
     #st.markdown("---")
     #st.subheader(f"📜 Translation of {selected_file.replace('.json','')}")
