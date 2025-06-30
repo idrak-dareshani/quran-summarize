@@ -12,7 +12,6 @@ st.title("📖 Quranic Lecture Summarizer")
 # Language selection (excluding English)
 language_map = {
     "اردو (Urdu)": "ur",
-    "Arabic (العربية)": "ar",
     "Turkish (Türkçe)": "tr",
     "Hindi (हिन्दी)": "hi",
     "French (Français)": "fr",
@@ -38,7 +37,7 @@ if selected_file:
     if os.path.exists(json_path):
         with open(json_path, 'r', encoding='utf-8') as f:
             json_data = json.load(f)
-            urdu_text = json_data.get("corrected_text", "❌ No corrected text found.")
+            urdu_text = json_data.get("text", "❌ No corrected text found.")
     else:
         urdu_text = "❌ JSON file not found."
 
