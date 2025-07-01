@@ -7,15 +7,15 @@ from src.utils import load_cached_translation, save_translation_to_cache
 DATA_DIR = "data"
 
 st.set_page_config(page_title="Quran Summarizer", layout="wide")
-st.title("📖 Quranic Lecture Summarizer")
+st.title("📖 Quran Lecture Summarizer")
 
 # Language selection (excluding English)
 language_map = {
     "اردو (Urdu)": "ur",
-    "Turkish (Türkçe)": "tr",
     "Hindi (हिन्दी)": "hi",
-    "French (Français)": "fr",
     "Bengali (বাংলা)": "bn",
+    "Turkish (Türkçe)": "tr",
+    "French (Français)": "fr",
     "German (Deutsch)": "de"
 }
 
@@ -41,9 +41,6 @@ if selected_file:
     else:
         urdu_text = "❌ TXT file not found."
 
-    #st.markdown("---")
-    #st.subheader(f"📜 Translation of {selected_file.replace('.json','')}")
-
     # Remove extension and make cache-safe key
     file_key = os.path.splitext(selected_file)[0].replace(" ", "_")
 
@@ -52,6 +49,10 @@ if selected_file:
         # Check cache first
         translated_selected = load_cached_translation(file_key, selected_lang_code)
         translated_english = load_cached_translation(file_key, "en")
+
+        # truncate urdu_text if longer than 5000 characters
+        if len(urdu_text) > 5000:
+            urdu_text = urdu_text[:3250] + "..."
 
         # Translate and save if not in cache
         if not translated_selected:
