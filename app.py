@@ -1,22 +1,26 @@
 import streamlit as st
 import os
-import json
-from deep_translator import GoogleTranslator
-from src.utils import load_cached_translation, save_translation_to_cache
+from translate import TafsirTranslator
 
 DATA_DIR = "data"
+CACHE_DIR = "cache"
 
 st.set_page_config(page_title="Quran Summarizer", layout="wide")
 st.title("📖 Quran Lecture Summarizer")
 
 # Language selection (excluding English)
 language_map = {
-    "اردو (Urdu)": "ur",
-    "Hindi (हिन्दी)": "hi",
-    "Bengali (বাংলা)": "bn",
-    "Turkish (Türkçe)": "tr",
-    "French (Français)": "fr",
-    "German (Deutsch)": "de"
+    "Arabic": "ar",
+    "Bengali": "bn",
+    "English": "en",
+    "French": "fr",
+    "German": "de",
+    "Hindi": "hi",
+    "Indonesian": "id",
+    "Malay": "ms",
+    "Spanish": "es",
+    "Swahili": "sw",
+    "Turkish": "tr"
 }
 
 # 🔄 Dropdowns on the same row
@@ -41,40 +45,40 @@ if selected_file:
     else:
         urdu_text = "❌ TXT file not found."
 
-    # Remove extension and make cache-safe key
-    file_key = os.path.splitext(selected_file)[0].replace(" ", "_")
-
-    # 🌐 Translation
+    # 🌐 Load translated file from cache
     try:
-        # Check cache first
-        translated_selected = load_cached_translation(file_key, selected_lang_code)
-        translated_english = load_cached_translation(file_key, "en")
+        
+        # en_file_path = os.path.join(CACHE_DIR, "en", selected_file)
+        # if os.path.exists(en_file_path):
+        #     with open(en_file_path, 'r', encoding='utf-8') as f:
+        #         translated_english = f.read()
 
-        # truncate urdu_text if longer than 5000 characters
-        if len(urdu_text) > 5000:
-            urdu_text = urdu_text[:3250] + "..."
-
-        # Translate and save if not in cache
-        if not translated_selected:
-            translated_selected = urdu_text if selected_lang_code == "ur" else \
-                GoogleTranslator(source='ur', target=selected_lang_code).translate(urdu_text)
-            save_translation_to_cache(file_key, selected_lang_code, translated_selected)
-
-        if not translated_english:
-            translated_english = GoogleTranslator(source='ur', target='en').translate(urdu_text)
-            save_translation_to_cache(file_key, "en", translated_english)
+        lang_file_path = os.path.join(CACHE_DIR, selected_lang_code, selected_file)
+        if os.path.exists(lang_file_path):
+            with open(lang_file_path, 'r', encoding='utf-8') as f:
+                translated_selected = f.read()
+        else:
+            translator = TafsirTranslator()
+            result = translator.translate_tafsir(urdu_text, "ur", selected_lang_code)
+            translated_selected = result["translated_text"]
+            
+            # save in cache folder for next
+            lang_folder = os.path.join(CACHE_DIR, selected_lang_code)
+            os.makedirs(lang_folder, exist_ok=True)
+            with open(lang_file_path, 'w', encoding='utf-8') as f:
+                f.write(translated_selected)
 
     except Exception as e:
         st.error(f"❌ Translation failed: {str(e)}")
         translated_selected = ""
-        translated_english = ""
+        #translated_english = ""
 
     # 📖 Display in 2 columns
     col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("🗣 English")
-        st.write(translated_english)
-
     with col2:
+        st.subheader("🗣 Urdu (Original)")
+        st.write(urdu_text)
+
+    with col1:
         st.subheader(f"🗣 {selected_lang_display}")
         st.write(translated_selected)
