@@ -14,70 +14,109 @@ st.set_page_config(
 
 # Custom CSS for scrollable columns and beautiful Urdu font
 st.markdown("""
-<style>
-    /* Remove extra space above title */
-    .block-container {
-        padding-top: 1rem;
-        padding-bottom: 0rem;
-    }
-            
-    /* Scrollable containers */
-    .scrollable-container {
-        height: 60vh;
-        overflow-y: auto;
-        padding: 5px;
-        border: 1px solid #e0e0e0;
-        border-radius: 10px;
-        background-color: #fafafa;
-        margin-bottom: 10px;
-    }
-    
-    /* Beautiful Urdu font styling */
-    .urdu-text {
-        font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Nafees Web Naskh', serif;
-        font-size: 18px;
-        line-height: 2.2;
-        text-align: right;
-        direction: rtl;
-        color: #2c3e50;
-        padding: 10px;
-    }
-    
-    /* English/other language text styling */
-    .translated-text {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        font-size: 16px;
-        line-height: 1.8;
-        color: #34495e;
-        padding: 10px;
-    }
-    
-    /* Custom scrollbar */
-    .scrollable-container::-webkit-scrollbar {
-        width: 8px;
-    }
-    
-    .scrollable-container::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 4px;
-    }
-    
-    .scrollable-container::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 4px;
-    }
-    
-    .scrollable-container::-webkit-scrollbar-thumb:hover {
-        background: #555;
-    }
-</style>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri&family=Noto+Naskh+Arabic&family=Noto+Nastaliq+Urdu&display=swap" rel="stylesheet">
+    <style>
+        /* Reset top padding */
+        .block-container {
+            padding-top: 0rem;
+            padding-bottom: 1rem;
+        }
+
+        /* Gradient Header Banner */
+        .gradient-header {
+            background: linear-gradient(to right, #4b6cb7, #182848);
+            padding: 1rem;
+            border-radius: 12px;
+            text-align: center;
+            color: white;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .gradient-header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        /* Card-like scrollable containers */
+        .scrollable-container {
+            height: 60vh;
+            overflow-y: auto;
+            padding: 1rem;
+            background-color: #ffffff;
+            border: 1px solid #d6dbe2;
+            border-radius: 12px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        /* Urdu font rendering */
+        .urdu-text {
+            font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Nafees Web Naskh', serif;
+            font-size: 20px;
+            line-height: 2.3;
+            text-align: right;
+            direction: rtl;
+            color: #2c3e50;
+        }
+
+        /* Arabic font rendering */
+        .arabic-text {
+            font-family: 'Amiri', 'Noto Naskh Arabic', 'Scheherazade New', serif;
+            font-size: 20px;
+            line-height: 2.3;
+            text-align: right;
+            direction: rtl;
+            color: #2c3e50;
+        }
+
+        /* Latin language text */
+        .translated-text {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 17px;
+            line-height: 1.8;
+            text-align: left;
+            direction: ltr;
+            color: #2c3e50;
+        }
+
+        /* Scrollbar Styling */
+        .scrollable-container::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .scrollable-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .scrollable-container::-webkit-scrollbar-thumb {
+            background: #bbb;
+            border-radius: 10px;
+        }
+
+        .scrollable-container::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+
+        h3 {
+            font-size: 1rem;
+            color: #1e2d3b;
+            margin-top: 0rem;
+        }
+    </style>
 """, unsafe_allow_html=True)
 
 # Session state for caching
 if 'translator' not in st.session_state:
     st.session_state.translator = TafsirTranslator()
 
-st.title("📖 Quran Lecture Summarizer")
+st.markdown("""
+<div class="gradient-header">
+    <h1>📖 Quran Lecture Summarizer</h1>
+</div>
+""", unsafe_allow_html=True)
 
 # Language selection
 language_map = {
@@ -175,18 +214,24 @@ if selected_file:
 
     # Display content
     if translated_text:
+
+        if selected_lang_code == "ar":
+            lang_class = "arabic-text"
+        else:
+            lang_class = "translated-text"
+
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader(f"🗣 {selected_lang_display}")
+            st.markdown(f"<h3 style='text-align: left;'>🗣 {selected_lang_display}</h3>", unsafe_allow_html=True)
             st.markdown(f"""
                 <div class="scrollable-container">
-                    <div class="translated-text">{translated_text}</div>
+                    <div class="{lang_class}">{translated_text}</div>
                 </div>
             """, unsafe_allow_html=True)
         
         with col2:
-            st.subheader("🗣 اردو (Original)")
+            st.markdown("<h3 style='text-align: right;'>🗣 اردو (Original)</h3>", unsafe_allow_html=True)
             st.markdown(f"""
                 <div class="scrollable-container">
                     <div class="urdu-text">{urdu_text}</div>
