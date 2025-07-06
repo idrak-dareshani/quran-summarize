@@ -14,7 +14,7 @@ from datetime import datetime
 from deep_translator import GoogleTranslator, single_detection
 
 class TafsirTranslator:
-    def __init__(self, delay_between_requests: float = 1.0):
+    def __init__(self, delay_between_requests: float = 3.0):
         """
         Initialize the multi-language tafsir translator
         
