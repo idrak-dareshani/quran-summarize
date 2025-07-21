@@ -61,16 +61,6 @@ st.markdown("""
             color: #2c3e50;
         }
 
-        /* Arabic font rendering */
-        .arabic-text {
-            font-family: 'Amiri', 'Noto Naskh Arabic', 'Scheherazade New', serif;
-            font-size: 20px;
-            line-height: 2.3;
-            text-align: right;
-            direction: rtl;
-            color: #2c3e50;
-        }
-
         /* Latin language text */
         .translated-text {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -214,18 +204,13 @@ if selected_file:
     # Display content
     if translated_text:
 
-        if selected_lang_code == "ar":
-            lang_class = "arabic-text"
-        else:
-            lang_class = "translated-text"
-
         col1, col2 = st.columns(2)
         
         with col1:
             st.markdown(f"<h3 style='text-align: left;'>🗣 {selected_lang_display}</h3>", unsafe_allow_html=True)
             st.markdown(f"""
                 <div class="scrollable-container">
-                    <div class="{lang_class}">{translated_text}</div>
+                    <div class="translated-text">{translated_text}</div>
                 </div>
             """, unsafe_allow_html=True)
         
