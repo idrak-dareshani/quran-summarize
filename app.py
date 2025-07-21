@@ -120,9 +120,8 @@ st.markdown("""
 
 # Language selection
 language_map = {
-    "Arabic": "ar",
-    "Bengali": "bn",
     "English": "en",
+    "Bengali": "bn",
     "French": "fr",
     "German": "de",
     "Hindi": "hi",
